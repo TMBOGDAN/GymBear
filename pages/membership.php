@@ -2,7 +2,7 @@
 session_start();
 require_once __DIR__ . '/../db.php';
 
-// verifica daca utilizatorul este logat
+// verifică dacă utilizatorul este logat
 if (!isset($_SESSION['user_id'])) {
     echo "<script>
             alert('Trebuie sa fii logat pentru a accesa pagina de abonamente!');
@@ -20,7 +20,7 @@ $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $user = $stmt->get_result()->fetch_assoc();
 
-// preia toate abonamentele
+// preia abonamentele
 $abonamentSelectat = isset($_GET['id']) ? (int)$_GET['id'] : null;
 $abonamente = [];
 $sql = "SELECT id, nume, pret, descriere, ora_start, ora_end, imagine_url, facilitati
@@ -31,7 +31,7 @@ while ($row = $res->fetch_assoc()) {
     $abonamente[] = $row;
 }
 
-// preia abonament selectat daca exista
+// preia abonament selectat dacă există
 $abonament = null;
 if ($abonamentSelectat) {
     $stmt = $conn->prepare("SELECT * FROM abonamente WHERE id=?");
@@ -43,8 +43,10 @@ if ($abonamentSelectat) {
 // cumpara abonament
 $mesaj = "";
 if (isset($_GET['buy']) && $abonament) {
-    if ($user['subscription_name'] === $abonament['nume'] && $user['subscription_end'] >= $today) {
-        $mesaj = "Ai deja acest abonament activ!";
+
+    // dacă utilizatorul are deja un abonament activ
+    if ($user['subscription_end'] && $user['subscription_end'] >= $today) {
+        $mesaj = "Ai deja un abonament activ! Trebuie să aștepți expirarea acestuia pentru a cumpăra altul.";
     } else {
         $start = date('Y-m-d');
         $end   = date('Y-m-d', strtotime('+30 days'));
@@ -57,7 +59,7 @@ if (isset($_GET['buy']) && $abonament) {
     }
 }
 
-// parseaza facilitati intr-un array
+
 function parse_facilitati($text) {
     if (!$text) return [];
     return array_filter(array_map('trim', preg_split('/\r\n|\r|\n|,/', $text)));
@@ -71,6 +73,7 @@ function parse_facilitati($text) {
 <link rel="stylesheet" href="/style/style.css">
 </head>
 <body>
+
 <?php include '../includes/header.php'; ?>
 
 <main>
@@ -80,7 +83,7 @@ function parse_facilitati($text) {
         <div class="message"><?= htmlspecialchars($mesaj) ?></div>
     <?php endif; ?>
 
-    <!-- afiseaza cardurile abonamentelor -->
+    <!-- afișează cardurile abonamentelor -->
     <div class="plans">
         <?php foreach ($abonamente as $a): ?>
             <div class="plan-card">
@@ -90,17 +93,16 @@ function parse_facilitati($text) {
                 <?php if ($a['ora_start'] && $a['ora_end']): ?>
                     <div class="hours"><?= date('H:i', strtotime($a['ora_start'])) ?> – <?= date('H:i', strtotime($a['ora_end'])) ?></div>
                 <?php endif; ?>
-                <a class="btn" href="?id=<?= $a['id'] ?>">Vezi detalii</a>
+                <a class="btn btn-red" href="?id=<?= $a['id'] ?>">Vezi detalii</a>
             </div>
         <?php endforeach; ?>
     </div>
 
-    <!-- afiseaza detalii abonament selectat -->
+    <!-- afișează detalii abonament selectat -->
     <?php if ($abonament): ?>
         <div class="details">
             <?php
-            $BASE_PATH = '/GymBear';
-            $img = !empty($abonament['imagine_url']) ? '/' . ltrim($abonament['imagine_url'], '/') :  '/resources/images/default.jpg';
+            $img = !empty($abonament['imagine_url']) ? '/' . ltrim($abonament['imagine_url'], '/') : '/resources/images/default.jpg';
             ?>
             <img src="<?= htmlspecialchars($img) ?>" alt="<?= htmlspecialchars($abonament['nume']) ?>">
             <h2>Abonament <?= htmlspecialchars($abonament['nume']) ?></h2>
@@ -121,14 +123,14 @@ function parse_facilitati($text) {
                 </ul>
             <?php endif; ?>
 
-            <!-- buton cumpara abonament -->
+            <!-- buton cumpără abonament -->
             <?php 
-            $abonamentActiv = ($user['subscription_name'] === $abonament['nume'] && $user['subscription_end'] >= $today);
+            $abonamentActiv = ($user['subscription_end'] && $user['subscription_end'] >= $today);
             ?>
             <?php if ($abonamentActiv): ?>
-                <span class="btn disabled">Abonament activ</span>
+                <span class="btn btn-red disabled">Ai deja un abonament activ</span>
             <?php else: ?>
-                <a class="btn" href="?id=<?= $abonament['id'] ?>&buy=1">Cumpara abonament</a>
+                <a class="btn btn-red" href="?id=<?= $abonament['id'] ?>&buy=1">Cumpără abonament</a>
             <?php endif; ?>
         </div>
     <?php endif; ?>

@@ -1,10 +1,5 @@
 <?php
-// activare afisare erori
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-
-// pornire sesiune cu setari securitate
+// pornire sesiune 
 session_start([
     'cookie_httponly' => true,
     'cookie_secure' => isset($_SERVER['HTTPS']),
@@ -81,30 +76,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <meta charset="UTF-8">
 <title>Contact GymBear</title>
 <link rel="stylesheet" href="/style/style.css">
+
 <style>
-/* stil formular contact */
-body { font-family: Arial, sans-serif; }
-input, textarea { width: 300px; padding: 8px; margin: 5px 0; }
-button { padding: 10px 20px; }
-.success { color: green; }
-.error { color: red; }
 
-.contact-page { justify-content:center; align-items:center; min-height:80vh; padding:20px; box-sizing:border-box; }
-.contact-page h1 { text-align:left; color:#c70000; margin-bottom:25px; font-size:28px; }
-.contact-page form { background:#292626; padding:30px 25px; border-radius:10px; box-shadow:0 8px 20px rgba(0,0,0,0.3); width:100%; max-width:400px; display:flex; flex-direction:column; }
+    body { font-family: Arial, sans-serif; }
+    input, textarea { width: 300px; padding: 8px; margin: 5px 0; }
+    button { padding: 10px 20px; }
+    .success { color: green; }
+    .error { color: red; }
 
-.contact-page input[type="text"], .contact-page input[type="email"], .contact-page textarea {
-    background:#111; color:#fff; border:1px solid #c70000; border-radius:6px; padding:12px; margin-bottom:15px; font-size:16px; transition:0.3s;
-}
-.contact-page input:focus, .contact-page textarea:focus { outline:none; border-color:#ff2e2e; box-shadow:0 0 5px rgba(255,46,46,0.5); }
+    .contact-page { justify-content:center; align-items:center; min-height:80vh; padding:20px; box-sizing:border-box; }
+    .contact-page h1 { text-align:left; color:#c70000; margin-bottom:25px; font-size:28px; }
+    .contact-page form { background:#292626; padding:30px 25px; border-radius:10px; box-shadow:0 8px 20px rgba(0,0,0,0.3); width:100%; max-width:400px; display:flex; flex-direction:column; }
 
-.contact-page textarea { min-height:100px; resize:vertical; }
-.contact-page button { background-color:#c70000; color:#fff; border:none; padding:12px; border-radius:6px; font-size:16px; cursor:pointer; transition:0.3s; }
-.contact-page button:hover { background-color:#ff2e2e; }
+    .contact-page input[type="text"], .contact-page input[type="email"], .contact-page textarea {
+        background:#111; color:#fff; border:1px solid #c70000; border-radius:6px; padding:12px; margin-bottom:15px; font-size:16px; transition:0.3s;
+    }
+    .contact-page input:focus, .contact-page textarea:focus { outline:none; border-color:#ff2e2e; box-shadow:0 0 5px rgba(255,46,46,0.5); }
 
-.contact-page .success { color:#27ae60; text-align:center; margin-bottom:15px; font-weight:bold; }
-.contact-page .error { color:#e74c3c; text-align:center; margin-bottom:15px; font-weight:bold; }
+    .contact-page textarea { min-height:100px; resize:vertical; }
+    .contact-page button { background-color:#c70000; color:#fff; border:none; padding:12px; border-radius:6px; font-size:16px; cursor:pointer; transition:0.3s; }
+    .contact-page button:hover { background-color:#ff2e2e; }
+
+    .contact-page .success { color:#27ae60; text-align:center; margin-bottom:15px; font-weight:bold; }
+    .contact-page .error { color:#e74c3c; text-align:center; margin-bottom:15px; font-weight:bold; }
 </style>
+
 </head>
 <body>
 

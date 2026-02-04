@@ -1,5 +1,5 @@
 <?php
-session_start();
+
 require_once __DIR__ . '/../db.php';
 
 $page = $_GET['page'] ?? 'abonamente';
@@ -84,25 +84,37 @@ if(isset($_GET['export_antrenori'])) {
 
 // adaugare abonament
 if (isset($_POST['add_abonament'])) {
-    $stmt = $conn->prepare("
-        INSERT INTO abonamente 
-        (nume, pret, facilitati, descriere, ora_start, ora_end, imagine_url)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    ");
-    $stmt->bind_param(
-        "sdsssss",
-        $_POST['nume'],
-        $_POST['pret'],
-        $_POST['facilitati'],
-        $_POST['descriere'],
-        $_POST['ora_start'],
-        $_POST['ora_end'],
-        $_POST['imagine_url']
-    );
-    $stmt->execute();
+    $nume = trim($_POST['nume']);
+    $pret = floatval($_POST['pret']);
+    $ora_start = $_POST['ora_start'];
+    $ora_end   = $_POST['ora_end'];
+
+    if ($pret <= 0) {
+        $error = "Prețul trebuie să fie mai mare decât 0.";
+    } elseif ($ora_start && $ora_end && $ora_end <= $ora_start) {
+        $error = "Ora de sfârșit trebuie să fie după ora de început.";
+    } else {
+        $stmt = $conn->prepare("
+            INSERT INTO abonamente 
+            (nume, pret, facilitati, descriere, ora_start, ora_end, imagine_url)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ");
+        $stmt->bind_param(
+            "sdsssss",
+            $nume,
+            $pret,
+            $_POST['facilitati'],
+            $_POST['descriere'],
+            $ora_start,
+            $ora_end,
+            $_POST['imagine_url']
+        );
+        $stmt->execute();
+        $success = "Abonament adăugat cu succes.";
+    }
 }
 
-// stergere abonament
+// sterge abonament
 if (isset($_GET['delete_abonament'])) {
     $stmt = $conn->prepare("DELETE FROM abonamente WHERE id=?");
     $stmt->bind_param("i", $_GET['delete_abonament']);
@@ -127,21 +139,21 @@ if (isset($_POST['add_antrenor'])) {
     $stmt->execute();
 }
 
-// stergere antrenor
+// sterge antrenor
 if (isset($_GET['delete_antrenor'])) {
     $stmt = $conn->prepare("DELETE FROM antrenori WHERE id=?");
     $stmt->bind_param("i", $_GET['delete_antrenor']);
     $stmt->execute();
 }
 
-// stergere user
+// sterge user
 if (isset($_GET['delete_user'])) {
     $stmt = $conn->prepare("DELETE FROM accounts WHERE id=? AND role='user'");
     $stmt->bind_param("i", $_GET['delete_user']);
     $stmt->execute();
 }
 
-// creare admin
+// creare cont admin
 if (isset($_POST['create_admin'])) {
     $username = trim($_POST['username']);
     $email    = trim($_POST['email']);
@@ -176,31 +188,54 @@ if (isset($_POST['update_admin'])) {
     $stmt->execute();
     $success = "Datele adminului au fost actualizate.";
 }
+
 ?>
 <!DOCTYPE html>
 <html lang="ro">
 <head>
 <meta charset="UTF-8">
 <title>Admin Panel</title>
+
 <style>
-/* stil simplu pentru admin */
-body { background:#111; color:#fff; font-family:Arial; margin:0; }
-.container { padding:10px; }
-button { background:#ff9800; border:none; padding:8px 14px; cursor:pointer; }
-.form-box { background:#1c1c1c; padding:15px; margin:15px 0; }
-input, textarea, select { width:100%; padding:8px; margin:6px 0; }
-table { width:100%; border-collapse:collapse; margin-top:15px; }
-th, td { border:1px solid #333; padding:8px; }
-a.delete { color:#ff4444; }
-.success { color:#4caf50; }
-i { color:#aaa; }
+
+    body { background:#111; color:#fff; font-family:Arial; margin:0; }
+    .container { padding:10px; }
+    button { background:#ff9800; border:none; padding:8px 14px; cursor:pointer; }
+    .form-box { background:#1c1c1c; padding:15px; margin:15px 0; }
+    input, textarea, select { width:100%; padding:8px; margin:6px 0; }
+    table { width:100%; border-collapse:collapse; margin-top:15px; }
+    th, td { border:1px solid #333; padding:8px; }
+    a.delete { color:#ff4444; }
+    .success { color:#4caf50; }
+    .error { color:#ff4444; }
+    i { color:#aaa; }
 </style>
+
 <script>
-function toggleForm(id) {
-    const el = document.getElementById(id);
-    el.style.display = (el.style.display === 'block') ? 'none' : 'block';
-}
+    function toggleForm(id) {
+        const el = document.getElementById(id);
+        el.style.display = (el.style.display === 'block') ? 'none' : 'block';
+    }
+
+    function validateAbonament(form) {
+        const pret = parseFloat(form.pret.value);
+        const oraStart = form.ora_start.value;
+        const oraEnd = form.ora_end.value;
+
+        if (pret <= 0) {
+            alert("Prețul trebuie să fie mai mare decât 0.");
+            return false;
+        }
+
+        if (oraStart && oraEnd && oraEnd <= oraStart) {
+            alert("Ora de sfârșit trebuie să fie după ora de început.");
+            return false;
+        }
+
+        return true;
+    }
 </script>
+
 <link rel="stylesheet" href="/style/style.css">
 </head>
 <body>
@@ -215,15 +250,18 @@ function toggleForm(id) {
 
 <div class="container">
 <?= $success ? "<p class='success'>$success</p>" : "" ?>
+<?= $error ? "<p class='error'>$error</p>" : "" ?>
 
 <!-- pagina abonamente -->
 <?php if ($page==='abonamente'): 
     $abonamente = $conn->query("SELECT * FROM abonamente ORDER BY id DESC");
 ?>
+
 <h2>Abonamente</h2>
+
 <button onclick="toggleForm('form-abonament')">➕ Adauga abonament</button>
 <div id="form-abonament" class="form-box" style="display:none;">
-<form method="post">
+<form method="post" onsubmit="return validateAbonament(this)">
     <input name="nume" placeholder="Nume" required>
     <input name="pret" type="number" step="0.01" placeholder="Pret" required>
     <textarea name="facilitati" placeholder="Facilitati"></textarea>

@@ -5,109 +5,101 @@
     <title>Despre GymBear</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<style> 
-/* ==============================
-   BODY
-   ============================== */
-body {
-    background-color: #0f0f0f;
-    color: #f1f1f1; 
-    font-family: Arial, Helvetica, sans-serif;
-    font-size: 18px;
-    line-height: 1.75;
-    margin: 0;
-    padding: 0;
-}
+    <style> 
 
-/* ==============================
-   CONTAINER & LAYOUT
-   ============================== */
-.container {
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 80px 20px;
-}
+        body {
+            background-color: #0f0f0f;
+            color: #f1f1f1; 
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 18px;
+            line-height: 1.75;
+            margin: 0;
+            padding: 0;
+        }
 
-/* wrapper principal */
-.main {
-    background-color: transparent;
-    padding: 10px;
-}
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 80px 20px;
+        }
 
-p {
-    margin-bottom: 10px;
-    text-align: left;
-}
+        .main {
+            background-color: transparent;
+            padding: 10px;
+        }
 
-section-p{
-    margin:0px;
-}
+        p {
+            margin-bottom: 10px;
+            text-align: left;
+        }
 
-h1 {
-    font-size: 28px;
-    margin-bottom: 15px;
-    color: #ff0000;
-    text-align: center;
-}
+        section-p{
+            margin:0px;
+        }
 
-h2 {
-    font-size: 24px;
-    margin-bottom: 15px;
-    color: #ff0000;
-    text-align: left;
-}
+        h1 {
+            font-size: 28px;
+            margin-bottom: 15px;
+            color: #ff0000;
+            text-align: center;
+        }
 
-h3 {
-    font-size: 18px;
-    margin: 15px 0 10px;
-    color: #ffffff;
-    text-align: left;
-}
+        h2 {
+            font-size: 24px;
+            margin-bottom: 15px;
+            color: #ff0000;
+            text-align: left;
+        }
 
-ul, ol {
-    padding-left: 30px;
-    margin-bottom: 15px;
-}
+        h3 {
+            font-size: 18px;
+            margin: 15px 0 10px;
+            color: #ffffff;
+            text-align: left;
+        }
 
-li {
-    margin-bottom: 10px;
-    text-align: left;
-}
+        ul, ol {
+            padding-left: 30px;
+            margin-bottom: 15px;
+        }
 
-.er-diagram {
-    max-width: 100%;
-    height: 400px;
-    display: block;
-    margin: 20px auto;
-    border: 1px solid #ccc;
-    padding: 6px;
-    background: #250000;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.15);
-}
+        li {
+            margin-bottom: 10px;
+            text-align: left;
+        }
 
-.er-caption {
-    font-size: 11px;
-    color: #bbbbbb;
-    text-align: center;
-    margin-top: 6px;
-}
-.p{
-    text-align: left;
+        .er-diagram {
+            max-width: 100%;
+            height: 400px;
+            display: block;
+            margin: 20px auto;
+            border: 1px solid #ccc;
+            padding: 6px;
+            background: #250000;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+        }
 
-}
+        .er-caption {
+            font-size: 11px;
+            color: #bbbbbb;
+            text-align: center;
+            margin-top: 6px;
+        }
+        .p{
+            text-align: left;
 
-/* ==============================
-   FOOTER
-   ============================== */
-footer {
-    text-align: center;
-    font-size: 14px;
-    color: #aaaaaa;
-    padding: 20px 0;
-    border-top: 1px solid red;
-    margin-top: 80px;
-}
-</style>
+        }
+
+
+        footer {
+            text-align: center;
+            font-size: 14px;
+            color: #aaaaaa;
+            padding: 20px 0;
+            border-top: 1px solid red;
+            margin-top: 80px;
+        }
+    </style>
     
      <link rel="stylesheet" href="/style/style.css">
 

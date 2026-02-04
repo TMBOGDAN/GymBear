@@ -446,16 +446,25 @@ footer {
   border-radius: 8px;
   outline: none;
   transition: border-color .15s, box-shadow .15s;
-  width: 220px;
+  
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
 }
 
-.trainers-cards form input[type="date"]:focus,
-.trainers-cards form input[type="time"]:focus {
-  border-color: var(--accent-light);
-  box-shadow: 0 0 0 6px rgba(199, 0, 0, 0.07);
+/* INPUT DATE & TIME */
+.trainers-cards input[type="date"],
+.trainers-cards input[type="time"] {
+  background: #000;
+  color: var(--accent-light);
+  border: 1px solid var(--accent);
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  caret-color: transparent;
+  user-select: none;
+  -webkit-appearance: auto;
+  appearance: auto;
 }
 
 /* Button (keeps PHP as-is — targets the existing button) */

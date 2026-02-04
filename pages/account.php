@@ -7,7 +7,7 @@ session_start([
 
 require_once '../db.php';
 
-// functie simpla pentru XSS
+// escape XSS
 function e($string) {
     return htmlspecialchars($string, ENT_QUOTES, 'UTF-8');
 }
@@ -28,35 +28,26 @@ if (empty($_SESSION['csrf_token'])) {
 }
 $csrf_token = $_SESSION['csrf_token'];
 
-// procesare formulare
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
     if (!isset($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
         die("CSRF token invalid");
     }
 
-    // update profil
+    // update email
     if (isset($_POST['update_profile'])) {
-        $username = trim($_POST['username']);
-        $email    = trim($_POST['email']);
+        $email = trim($_POST['email']);
 
-        if ($username === '' || $email === '') {
-            $error = "Completeaza toate campurile.";
-        } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $error = "Email invalid.";
         } else {
-            $stmt = $conn->prepare(
-                "UPDATE accounts SET username = ?, email = ? WHERE id = ?"
-            );
-            $stmt->bind_param("ssi", $username, $email, $user_id);
+            $stmt = $conn->prepare("UPDATE accounts SET email=? WHERE id=?");
+            $stmt->bind_param("si", $email, $user_id);
             $stmt->execute();
             $stmt->close();
 
-            $_SESSION['nume'] = $username;
             $success = "Profil actualizat cu succes.";
-
-            unset($_SESSION['csrf_token']);
-            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-            $csrf_token = $_SESSION['csrf_token'];
         }
     }
 
@@ -69,57 +60,66 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $hash = password_hash($new_password, PASSWORD_DEFAULT);
 
-            $stmt = $conn->prepare(
-                "UPDATE accounts SET password_hash = ? WHERE id = ?"
-            );
+            $stmt = $conn->prepare("UPDATE accounts SET password_hash=? WHERE id=?");
             $stmt->bind_param("si", $hash, $user_id);
             $stmt->execute();
             $stmt->close();
 
-            $success = "Parola a fost schimbata cu succes.";
-
-            unset($_SESSION['csrf_token']);
-            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-            $csrf_token = $_SESSION['csrf_token'];
+            $success = "Parola a fost schimbata.";
         }
+    }
+
+    // incheiere abonament
+    if (isset($_POST['end_subscription'])) {
+        $stmt = $conn->prepare("
+            UPDATE accounts
+            SET subscription_name = NULL,
+                subscription_end = NULL
+            WHERE id = ?
+        ");
+        $stmt->bind_param("i", $user_id);
+        $stmt->execute();
+        $stmt->close();
+
+        $success = "Abonamentul a fost incheiat.";
     }
 
     // anulare sedinta
     if (isset($_POST['cancel_session'])) {
         $sedinta_id = (int)$_POST['session_id'];
 
-        $stmt = $conn->prepare(
-            "DELETE FROM sedinte WHERE id = ? AND id_utilizator = ?"
-        );
+        $stmt = $conn->prepare("DELETE FROM sedinte WHERE id=? AND id_utilizator=?");
         $stmt->bind_param("ii", $sedinta_id, $user_id);
         $stmt->execute();
         $stmt->close();
 
-        header("Location: account.php?cancelled=1");
+        header("Location: account.php");
         exit;
     }
+
+    // regenereaza CSRF
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    $csrf_token = $_SESSION['csrf_token'];
 }
 
-// preluare date utilizator
-$stmt = $conn->prepare(
-    "SELECT username, email, subscription_name, subscription_end FROM accounts WHERE id = ?"
-);
+
+$stmt = $conn->prepare("
+    SELECT username, email, subscription_name, subscription_end
+    FROM accounts WHERE id=?
+");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $user = $stmt->get_result()->fetch_assoc();
 $stmt->close();
 
-$username_val = isset($_POST['username']) ? $_POST['username'] : $user['username'];
-$email_val    = isset($_POST['email']) ? $_POST['email'] : $user['email'];
 
-// sedinte viitoare
-$stmt = $conn->prepare(
-    "SELECT id, data_sedinta, ora_sedinta, status
-     FROM sedinte
-     WHERE id_utilizator = ?
-       AND CONCAT(data_sedinta, ' ', IFNULL(ora_sedinta,'00:00:00')) >= NOW()
-     ORDER BY data_sedinta, ora_sedinta ASC"
-);
+$stmt = $conn->prepare("
+    SELECT id, data_sedinta, ora_sedinta, status
+    FROM sedinte
+    WHERE id_utilizator=?
+      AND CONCAT(data_sedinta,' ',IFNULL(ora_sedinta,'00:00:00')) >= NOW()
+    ORDER BY data_sedinta, ora_sedinta
+");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $sedinte = $stmt->get_result();
@@ -130,20 +130,26 @@ $sedinte = $stmt->get_result();
 <meta charset="UTF-8">
 <title>Contul meu</title>
 <link rel="stylesheet" href="/style/style.css">
-    
+
 <style>
-    .btn{
-        padding:1px;
+.btn-small {
+    padding: 6px 14px;
+    font-size: 0.85rem;
+    border-radius: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none; 
+    cursor: pointer;
     }
 </style>
-    
 </head>
 <body>
+
 <?php include '../includes/header.php'; ?>
 
 <div class="content">
 
-<!-- afisare erori sau succes -->
 <?php if ($error): ?>
     <p style="color:red"><?= e($error) ?></p>
 <?php endif; ?>
@@ -152,62 +158,66 @@ $sedinte = $stmt->get_result();
     <p style="color:green"><?= e($success) ?></p>
 <?php endif; ?>
 
-<!-- profil utilizator -->
+
 <div id="profil" class="section">
 <h2>Profil</h2>
-<h3>Username: <?= e($user['username']) ?></h3>
 
-<p><strong>Abonament activ:</strong> 
-<?php 
-if (!empty($user['subscription_name'])) {
-    echo e($user['subscription_name']) . " (pana la " . date('d.m.Y', strtotime($user['subscription_end'])) . ")";
-} else {
-    echo "Nu ai abonament";
-}
-?>
+<p><strong>Username:</strong> <?= e($user['username']) ?></p>
+
+<p><strong>Abonament:</strong>
+<?php if ($user['subscription_name']): ?>
+    <?= e($user['subscription_name']) ?> (pana la <?= date('d.m.Y', strtotime($user['subscription_end'])) ?>)
+<?php else: ?>
+    Nu ai abonament
+<?php endif; ?>
 </p>
 
 <form method="post">
-    <input type="hidden" name="csrf_token" value="<?= $csrf_token ?>">
-
-    <input type="email" name="email"
-           value="<?= e($email_val) ?>"
-           required><br><br>
-
-    <button name="update_profile">Salveaza</button>
+<input type="hidden" name="csrf_token" value="<?= $csrf_token ?>">
+<input type="email" name="email" value="<?= e($user['email']) ?>" required>
+<br><br>
+<button name="update_profile" class="btn btn-small">Salveaza</button>
 </form>
 
 <h3>Schimba parola</h3>
 <form method="post">
-    <input type="hidden" name="csrf_token" value="<?= $csrf_token ?>">
-
-    <input type="password" name="new_password" required minlength="6"><br><br>
-    <button name="update_password">Schimba parola</button>
+<input type="hidden" name="csrf_token" value="<?= $csrf_token ?>">
+<input type="password" name="new_password" required minlength="6">
+<br><br>
+<button name="update_password" class="btn btn-small">Schimba parola</button>
 </form>
-    
-<a href="logout.php" class="btn">Logout</a>
+
+<?php if ($user['subscription_name']): ?>
+<form method="post" onsubmit="return confirm('Sigur vrei sa inchei abonamentul?');">
+<input type="hidden" name="csrf_token" value="<?= $csrf_token ?>">
+<button name="end_subscription" class="btn btn-small">Incheie abonament</button>
+</form>
+<?php endif; ?>
+
+<br>
+<a href="logout.php" class="btn btn-small">Logout</a>
 </div>
 
-<!-- sedinte viitoare -->
+
 <div id="sedinte" class="section">
 <h2>Sedinte viitoare</h2>
 
 <?php if ($sedinte->num_rows === 0): ?>
-    <p>Nu ai sedinte programate.</p>
+<p>Nu ai sedinte programate.</p>
 <?php endif; ?>
 
 <?php while ($s = $sedinte->fetch_assoc()): ?>
-<form method="post" onsubmit="return confirm('Sigur vrei sa anulezi sedinta?');">
-    <input type="hidden" name="csrf_token" value="<?= $csrf_token ?>">
-    <input type="hidden" name="session_id" value="<?= $s['id'] ?>">
+<form method="post" onsubmit="return confirm('Anulezi sedinta?');">
+<input type="hidden" name="csrf_token" value="<?= $csrf_token ?>">
+<input type="hidden" name="session_id" value="<?= $s['id'] ?>">
 
-    <strong>
-        <?= date('d.m.Y', strtotime($s['data_sedinta'])) ?>
-        <?= date('H:i', strtotime($s['ora_sedinta'])) ?>
-    </strong>
-    – <?= e($s['status']) ?>
+<strong>
+<?= date('d.m.Y', strtotime($s['data_sedinta'])) ?>
+<?= date('H:i', strtotime($s['ora_sedinta'])) ?>
+</strong>
+ – <?= e($s['status']) ?>
 
-    <button name="cancel_session">Anuleaza</button>
+<button name="cancel_session" class="btn btn-small">Anuleaza</button>
 </form>
 <?php endwhile; ?>
 </div>

@@ -5,26 +5,24 @@ require_once __DIR__ . '/../db.php';
 $id_utilizator = $_SESSION['user_id'] ?? null;
 $success = $error = "";
 
-// =====================
-// PRELUARE ANTRENORI
-// =====================
 $result = $conn->query("SELECT * FROM antrenori");
 
-// =====================
-// PROCESARE FORMULAR
-// =====================
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id_antrenor'])) {
 
     $id_antrenor  = intval($_POST['id_antrenor']);
     $data_sedinta = $_POST['data_sedinta'];
     $ora_sedinta  = $_POST['ora_sedinta'];
 
-    // Verificare login
     if (!$id_utilizator) {
         $error = "Trebuie să fiți logat pentru a programa o ședință.";
     } else {
-        // Verificare abonament
-        $stmt = $conn->prepare("SELECT subscription_name FROM accounts WHERE id = ?");
+        // preluare abonament + data expirare
+        $stmt = $conn->prepare("
+            SELECT subscription_name, subscription_end 
+            FROM accounts 
+            WHERE id = ?
+        ");
         $stmt->bind_param("i", $id_utilizator);
         $stmt->execute();
         $res = $stmt->get_result();
@@ -33,57 +31,68 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id_antrenor'])) {
         if (!$user || empty($user['subscription_name'])) {
             $error = "Trebuie să aveți un abonament activ pentru a programa o ședință.";
         } else {
-            // Preluare id abonament
-            $stmt2 = $conn->prepare("SELECT id FROM abonamente WHERE nume = ?");
-            $stmt2->bind_param("s", $user['subscription_name']);
-            $stmt2->execute();
-            $res_ab = $stmt2->get_result();
-            $abonament = $res_ab->fetch_assoc();
+            $today = date('Y-m-d');
+            $subscription_end = $user['subscription_end'];
 
-            if (!$abonament) {
-                $error = "Abonamentul dvs. nu este valid.";
+            // VALIDARE DATE
+            if ($data_sedinta < $today) {
+                $error = "Nu puteți programa o ședință în trecut!";
+            } elseif ($data_sedinta > $subscription_end) {
+                $error = "Nu puteți programa o ședință după expirarea abonamentului! Data maximă este $subscription_end.";
             } else {
-                $id_abonament = $abonament['id'];
-                $status = 'programata';
+                // preluare id abonament
+                $stmt2 = $conn->prepare("SELECT id FROM abonamente WHERE nume = ?");
+                $stmt2->bind_param("s", $user['subscription_name']);
+                $stmt2->execute();
+                $res_ab = $stmt2->get_result();
+                $abonament = $res_ab->fetch_assoc();
 
-                // verificare interval liber
-                $check = $conn->prepare("
-                    SELECT id FROM sedinte 
-                    WHERE id_antrenor = ? 
-                    AND data_sedinta = ? 
-                    AND ora_sedinta = ?
-                ");
-                $check->bind_param("iss", $id_antrenor, $data_sedinta, $ora_sedinta);
-                $check->execute();
-                $check->store_result();
-
-                if ($check->num_rows > 0) {
-                    $error = "Acest interval este deja ocupat!";
+                if (!$abonament) {
+                    $error = "Abonamentul nu este valid.";
                 } else {
-                    $stmt_insert = $conn->prepare("
-                        INSERT INTO sedinte
-                        (id_antrenor, id_abonament, id_utilizator, data_sedinta, ora_sedinta, status)
-                        VALUES (?, ?, ?, ?, ?, ?)
+                    $id_abonament = $abonament['id'];
+                    $status = 'programata';
+
+                    // verificare interval liber
+                    $check = $conn->prepare("
+                        SELECT id FROM sedinte
+                        WHERE id_antrenor = ?
+                        AND data_sedinta = ?
+                        AND ora_sedinta = ?
                     ");
-                    $stmt_insert->bind_param(
-                        "iiisss",
-                        $id_antrenor,
-                        $id_abonament,
-                        $id_utilizator,
-                        $data_sedinta,
-                        $ora_sedinta,
-                        $status
-                    );
-                    if ($stmt_insert->execute()) {
-                        $success = "Ședința a fost programată cu succes!";
+                    $check->bind_param("iss", $id_antrenor, $data_sedinta, $ora_sedinta);
+                    $check->execute();
+                    $check->store_result();
+
+                    if ($check->num_rows > 0) {
+                        $error = "Acest interval este deja ocupat!";
                     } else {
-                        $error = "A apărut o eroare la programare.";
+                        $insert = $conn->prepare("
+                            INSERT INTO sedinte
+                            (id_antrenor, id_abonament, id_utilizator, data_sedinta, ora_sedinta, status)
+                            VALUES (?, ?, ?, ?, ?, ?)
+                        ");
+                        $insert->bind_param(
+                            "iiisss",
+                            $id_antrenor,
+                            $id_abonament,
+                            $id_utilizator,
+                            $data_sedinta,
+                            $ora_sedinta,
+                            $status
+                        );
+
+                        if ($insert->execute()) {
+                            $success = "Ședința a fost programată cu succes!";
+                        } else {
+                            $error = "Eroare la programarea ședinței.";
+                        }
+                        $insert->close();
                     }
-                    $stmt_insert->close();
+                    $check->close();
                 }
-                $check->close();
+                $stmt2->close();
             }
-            $stmt2->close();
         }
         $stmt->close();
     }
@@ -101,53 +110,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id_antrenor'])) {
 <?php include '../includes/header.php'; ?>
 
 <h1>Antrenorii noștri</h1>
+
 <div class="trainers-cards">
+
 <?php
-// afișare success/error ca pop-up
 if ($success) echo "<script>alert('".addslashes($success)."');</script>";
-if ($error) echo "<script>alert('".addslashes($error)."');</script>";
+if ($error)   echo "<script>alert('".addslashes($error)."');</script>";
 ?>
 
 <?php
 if ($result->num_rows > 0) {
     while ($trainer = $result->fetch_assoc()) {
-        echo "<div class='trainer-card'>";
-        echo "<img src='../" . htmlspecialchars($trainer['poza']) . "' alt='" . htmlspecialchars($trainer['nume']) . "'>";
-        echo "<h3>" . htmlspecialchars($trainer['nume']) . "</h3>";
-        echo "<p>" . nl2br(htmlspecialchars($trainer['descriere'])) . "</p>";
-        
-        echo "<p><strong>Email:</strong> " . htmlspecialchars($trainer['email']) . "</p>";
+        ?>
+        <div class="trainer-card">
+            <img src="../<?= htmlspecialchars($trainer['poza']) ?>" alt="<?= htmlspecialchars($trainer['nume']) ?>">
+            <h3><?= htmlspecialchars($trainer['nume']) ?></h3>
+            <p><?= nl2br(htmlspecialchars($trainer['descriere'])) ?></p>
+            <p><strong>Email:</strong> <?= htmlspecialchars($trainer['email']) ?></p>
 
-        echo "
-        <form method='POST'>
-            <input type='hidden' name='id_antrenor' value='{$trainer['id']}'>
-            
-            <label>Data:
-                <input type='date' name='data_sedinta' required>
-            </label><br>
+            <form method="POST">
+                <input type="hidden" name="id_antrenor" value="<?= $trainer['id'] ?>">
 
-            <label>Ora:
-                <input type='time' name='ora_sedinta' required>
-            </label><br>
+                <label>Data:
+                    <input type="date" name="data_sedinta" required>
+                </label><br>
 
-            <button type='submit'>Programează ședință</button>
-        </form>
-        ";
+                <label>Ora:
+                    <input type="time" name="ora_sedinta" required>
+                </label><br>
 
-        echo "</div>";
+                <button type="submit">Programează ședință</button>
+            </form>
+        </div>
+        <?php
     }
 } else {
     echo "<p>Nu există antrenori disponibili momentan.</p>";
 }
 ?>
 
-
 </div>
-
 
 <?php include '../includes/footer.php'; ?>
 
 </body>
-
-
 </html>

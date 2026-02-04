@@ -1,18 +1,14 @@
 <?php
 
-// LOGIN.PHP - FitnessPro
-
-
-// pornire sesiune în mod sigur
 session_start([
     'cookie_httponly' => true,
-    'cookie_secure' => true,       // necesită HTTPS
+    'cookie_secure' => true,       
     'cookie_samesite' => 'Strict'
 ]);
 
-require_once '../db.php'; // corect path-ul către db.php
+require_once '../db.php'; 
 
-// dacă utilizatorul este deja logat, îl trimitem direct la account.php
+
 if(isset($_SESSION['user_id'])){
     header("Location: account.php");
     exit;
@@ -62,12 +58,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if(is_string($parola_hash) && password_verify($parola, $parola_hash)){
                 // setare sesiune si regenerare ID pentru securitate
                 session_regenerate_id(true);
-                unset($_SESSION['csrf_token']); // token vechi invalid
+                unset($_SESSION['csrf_token']); 
                 $_SESSION['user_id'] = $id;
                 $_SESSION['nume'] = $nume;
-                $_SESSION['role'] = $role; // rolul utilizatorului
+                $_SESSION['role'] = $role; 
 
-                // redirect catre account.php
+                
                 header("Location: account.php");
                 exit;
             } else {
@@ -100,7 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php if($error) echo "<p class='error-message'>".e($error)."</p>"; ?>
 
         <form action="login.php" method="POST">
-            <!-- CSRF token -->
+            
             <input type="hidden" name="csrf_token" value="<?= $csrf_token ?>">
 
             <div class="form-group">
