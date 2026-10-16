@@ -1,0 +1,5 @@
+# Local configuration and generated dependencies
+.env
+.env.*
+!.env.example
+vendor/
