@@ -30,18 +30,25 @@ function send_email($to, $type, $data = []) {
             return false;
     }
 
+    $smtpUser = getenv('SMTP_USER');
+    $smtpPassword = getenv('SMTP_PASSWORD');
+    if (!$smtpUser || !$smtpPassword) {
+        error_log('SMTP_USER and SMTP_PASSWORD must be configured.');
+        return false;
+    }
+
     $mail = new PHPMailer(true);
 
     try {
         $mail->isSMTP();
-        $mail->Host       = 'smtp.gmail.com';
+        $mail->Host       = getenv('SMTP_HOST') ?: 'smtp.gmail.com';
         $mail->SMTPAuth   = true;
-        $mail->Username   = 'tmbogdan15@gmail.com';
-        $mail->Password   = 'mcbj qxrl ilvy pbda';
+        $mail->Username   = $smtpUser;
+        $mail->Password   = $smtpPassword;
         $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
         $mail->Port       = 587;
 
-        $mail->setFrom('tmbogdan15@gmail.com', 'GymBear');
+        $mail->setFrom($smtpUser, 'GymBear');
         $mail->addAddress($to);
 
         if (!empty($replyTo)) {
